@@ -11,9 +11,23 @@ fn create_listening_socket(port: u16) -> Result<libc::c_int> {
         }
 
         let len = std::mem::size_of::<libc::sockaddr_in>();
+
+        // This sockaddr is only constructed on macOS.
+        #[cfg(target_os = "macos")]
         let sockaddr = libc::sockaddr_in {
             sin_len: len as u8, // macOS, but not Linux
             sin_family: libc::AF_INET as u8,
+            sin_port: port.to_be(),
+            sin_addr: libc::in_addr {
+                s_addr: libc::INADDR_ANY,
+            },
+            sin_zero: Default::default(),
+        };
+
+        // This sockaddr is only constructed on Linux.
+        #[cfg(target_os = "linux")]
+        let sockaddr = libc::sockaddr_in {
+            sin_family: libc::AF_INET as u16,
             sin_port: port.to_be(),
             sin_addr: libc::in_addr {
                 s_addr: libc::INADDR_ANY,
